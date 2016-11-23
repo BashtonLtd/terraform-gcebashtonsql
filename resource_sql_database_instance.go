@@ -96,22 +96,23 @@ func resourceSqlDatabaseInstance() *schema.Resource {
 									"authorized_networks": &schema.Schema{
 										Type:     schema.TypeList,
 										Optional: true,
-										Elem: &schema.Resource{
-											Schema: map[string]*schema.Schema{
-												"expiration_time": &schema.Schema{
-													Type:     schema.TypeString,
-													Optional: true,
-												},
-												"name": &schema.Schema{
-													Type:     schema.TypeString,
-													Optional: true,
-												},
-												"value": &schema.Schema{
-													Type:     schema.TypeString,
-													Optional: true,
-												},
-											},
-										},
+										Elem:     &schema.Schema{Type: schema.TypeString},
+										// Elem: &schema.Resource{
+										// 	Schema: map[string]*schema.Schema{
+										// 		"expiration_time": &schema.Schema{
+										// 			Type:     schema.TypeString,
+										// 			Optional: true,
+										// 		},
+										// 		"name": &schema.Schema{
+										// 			Type:     schema.TypeString,
+										// 			Optional: true,
+										// 		},
+										// 		"value": &schema.Schema{
+										// 			Type:     schema.TypeString,
+										// 			Optional: true,
+										// 		},
+										// 	},
+										// },
 									},
 									"ipv4_enabled": &schema.Schema{
 										Type:     schema.TypeBool,
@@ -364,20 +365,8 @@ func resourceSqlDatabaseInstanceCreate(d *schema.ResourceData, meta interface{})
 				settings.IpConfiguration.AuthorizedNetworks = make([]*sqladmin.AclEntry, 0)
 				_authorizedNetworksList := vp.([]interface{})
 				for _, _acl := range _authorizedNetworksList {
-					_entry := _acl.(map[string]interface{})
 					entry := &sqladmin.AclEntry{}
-
-					if vpp, okpp := _entry["expiration_time"]; okpp {
-						entry.ExpirationTime = vpp.(string)
-					}
-
-					if vpp, okpp := _entry["name"]; okpp {
-						entry.Name = vpp.(string)
-					}
-
-					if vpp, okpp := _entry["value"]; okpp {
-						entry.Value = vpp.(string)
-					}
+					entry.Value = _acl.(string)
 
 					settings.IpConfiguration.AuthorizedNetworks = append(
 						settings.IpConfiguration.AuthorizedNetworks, entry)
@@ -625,29 +614,43 @@ func resourceSqlDatabaseInstanceRead(d *schema.ResourceData, meta interface{}) e
 					if _ipc == nil {
 						continue
 					}
-					_entry := _ipc.(map[string]interface{})
-					if _entry["value"] == nil {
-						continue
-					}
-					_value := make(map[string]interface{})
-					_value["name"] = _entry["name"]
-					_value["expiration_time"] = _entry["expiration_time"]
-					// We key on value, since that is the only required part of
-					// this 3-tuple
-					_ipc_map[_entry["value"].(string)] = _value
+					// _entry := _ipc.(map[string]interface{})
+					// if _entry["value"] == nil {
+					// 	continue
+					// }
+					// _value := make(map[string]interface{})
+					// _value["name"] = _entry["name"]
+					// _value["expiration_time"] = _entry["expiration_time"]
+					// // We key on value, since that is the only required part of
+					// // this 3-tuple
+					// _ipc_map[_entry["value"].(string)] = _value
+					_ipc_map[_ipc.(string)] = _ipc
 				}
-				_authorized_networks := make([]interface{}, 0)
+				_authorized_networks_map := make(map[string]interface{}, 0)
 				// Next read the network tuples from the server, and reinsert those that
 				// correspond to ones defined locally
 				for _, entry := range settings.IpConfiguration.AuthorizedNetworks {
 					if _, okp := _ipc_map[entry.Value]; okp {
-						_entry := make(map[string]interface{})
-						_entry["value"] = entry.Value
-						_entry["name"] = entry.Name
-						_entry["expiration_time"] = entry.ExpirationTime
-						_authorized_networks = append(_authorized_networks, _entry)
+						// _entry := make(map[string]interface{})
+						// _entry["value"] = entry.Value
+						// _entry["name"] = entry.Name
+						// _entry["expiration_time"] = entry.ExpirationTime
+						// _authorized_networks = append(_authorized_networks, _entry)
+						_authorized_networks_map[entry.Value] = entry.Value;
 					}
 				}
+
+				_authorized_networks := make([]interface{}, 0)
+                //Match the original specified order otherwise we will update every run
+				for _, _ipc := range _authorizedNetworksList {
+					if _ipc == nil {
+						continue
+					}
+					if _, ok := _authorized_networks_map[_ipc.(string)]; ok {
+						_authorized_networks = append(_authorized_networks, _ipc.(string))
+					}
+				}
+
 				_ipConfiguration["authorized_networks"] = _authorized_networks
 			}
 			_ipConfigurationList[0] = _ipConfiguration
@@ -928,8 +931,7 @@ func resourceSqlDatabaseInstanceUpdate(d *schema.ResourceData, meta interface{})
 					}
 					_oipc_map := make(map[string]interface{})
 					for _, _ipc := range _oldAuthorizedNetworkList {
-						_entry := _ipc.(map[string]interface{})
-						_oipc_map[_entry["value"].(string)] = true
+						_oipc_map[_ipc.(string)] = true
 					}
 					// Next read the network tuples from the server, and reinsert those that
 					// were not previously defined
@@ -943,21 +945,8 @@ func resourceSqlDatabaseInstanceUpdate(d *schema.ResourceData, meta interface{})
 					// finally, update old entries and insert new ones
 					// and are still defined.
 					for _, _ipc := range _authorizedNetworksList {
-						_entry := _ipc.(map[string]interface{})
 						entry := &sqladmin.AclEntry{}
-
-						if vpp, okpp := _entry["expiration_time"]; okpp {
-							entry.ExpirationTime = vpp.(string)
-						}
-
-						if vpp, okpp := _entry["name"]; okpp {
-							entry.Name = vpp.(string)
-						}
-
-						if vpp, okpp := _entry["value"]; okpp {
-							entry.Value = vpp.(string)
-						}
-
+						entry.Value = _ipc.(string)
 						settings.IpConfiguration.AuthorizedNetworks = append(
 							settings.IpConfiguration.AuthorizedNetworks, entry)
 					}

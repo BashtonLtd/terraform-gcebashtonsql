@@ -8,13 +8,7 @@ This is based on the core [Terraform](https://github.com/hashicorp/terraform/tre
 
 #### Binary download (amd64 only)
 
-Simply clone the repository and link the precompiled binary into your `$PATH`. Assuming you have `~/bin` in your `$PATH`:
-
-```
-$ cd
-$ git clone git@github.com:BashtonLtd/terraform-gcebashtonsql.git
-$ ln -s ~/terraform-gcebashtonsql/terraform-gcebashtonsql ~/bin/terraform-gcebashtonsql
-```
+Grab the latest [release](https://github.com/BashtonLtd/terraform-gcebashtonsql/releases) and place the `terraform-gcebashtonsql` binary in your `$PATH`.
 
 #### Build from source
 

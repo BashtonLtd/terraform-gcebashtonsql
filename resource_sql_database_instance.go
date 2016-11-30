@@ -72,6 +72,18 @@ func resourceSqlDatabaseInstance() *schema.Resource {
 							Type:     schema.TypeBool,
 							Optional: true,
 						},
+						"disk_size": &schema.Schema{
+							Type:     schema.TypeInt,
+							Optional: true,
+						},
+						"disk_type": &schema.Schema{
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"disk_autoresize": &schema.Schema{
+							Type:     schema.TypeBool,
+							Optional: true,
+						},
 						"database_flags": &schema.Schema{
 							Type:     schema.TypeList,
 							Optional: true,
@@ -325,6 +337,24 @@ func resourceSqlDatabaseInstanceCreate(d *schema.ResourceData, meta interface{})
 		settings.CrashSafeReplicationEnabled = v.(bool)
 	}
 
+	if v, ok := _settings["disk_size"]; ok {
+		if v.(int) > 0 {
+			settings.DataDiskSizeGb = int64(v.(int))
+		}
+	}
+
+	if v, ok := _settings["disk_type"]; ok {
+		if len(v.(string)) > 0 {
+			settings.DataDiskType = v.(string)
+		}
+	}
+
+	if v, ok := _settings["disk_autoresize"]; ok {
+		if v.(bool) {
+			settings.StorageAutoResize = v.(bool)
+		}
+	}
+
 	if v, ok := _settings["database_flags"]; ok {
 		settings.DatabaseFlags = make([]*sqladmin.DatabaseFlags, 0)
 		_databaseFlagsList := v.([]interface{})
@@ -567,6 +597,24 @@ func resourceSqlDatabaseInstanceRead(d *schema.ResourceData, meta interface{}) e
 		_settings["crash_safe_replication"] = settings.CrashSafeReplicationEnabled
 	}
 
+	if v, ok := _settings["disk_size"]; ok && v != nil {
+		if v.(int) > 0 {
+			_settings["disk_size"] = settings.DataDiskSizeGb
+		}
+	}
+
+	if v, ok := _settings["disk_type"]; ok && v != nil {
+		if len(v.(string)) > 0 {
+			_settings["disk_type"] = settings.DataDiskType
+		}
+	}
+
+	if v, ok := _settings["disk_autoresize"]; ok && v != nil {
+		if v.(bool) {
+			_settings["disk_autoresize"] = settings.StorageAutoResize
+		}
+	}
+
 	if v, ok := _settings["database_flags"]; ok && len(v.([]interface{})) > 0 {
 		_flag_map := make(map[string]string)
 		// First keep track of localy defined flag pairs
@@ -636,12 +684,12 @@ func resourceSqlDatabaseInstanceRead(d *schema.ResourceData, meta interface{}) e
 						// _entry["name"] = entry.Name
 						// _entry["expiration_time"] = entry.ExpirationTime
 						// _authorized_networks = append(_authorized_networks, _entry)
-						_authorized_networks_map[entry.Value] = entry.Value;
+						_authorized_networks_map[entry.Value] = entry.Value
 					}
 				}
 
 				_authorized_networks := make([]interface{}, 0)
-                //Match the original specified order otherwise we will update every run
+				//Match the original specified order otherwise we will update every run
 				for _, _ipc := range _authorizedNetworksList {
 					if _ipc == nil {
 						continue
@@ -761,9 +809,6 @@ func resourceSqlDatabaseInstanceRead(d *schema.ResourceData, meta interface{}) e
 
 	d.Set("ip_address", _ipAddresses)
 
-	log.Printf("MLF TF: %s\n", d.Get("master_instance_name"))
-	log.Printf("MLF API: %s\n", instance.MasterInstanceName)
-
 	if v, ok := d.GetOk("master_instance_name"); ok && v != nil {
 		d.Set("master_instance_name", strings.TrimPrefix(instance.MasterInstanceName, project+":"))
 	}
@@ -845,6 +890,24 @@ func resourceSqlDatabaseInstanceUpdate(d *schema.ResourceData, meta interface{})
 
 		if v, ok := _settings["crash_safe_replication"]; ok {
 			settings.CrashSafeReplicationEnabled = v.(bool)
+		}
+
+		if v, ok := _settings["disk_size"]; ok {
+			if v.(int) > 0 {
+				settings.DataDiskSizeGb = int64(v.(int))
+			}
+		}
+
+		if v, ok := _settings["disk_type"]; ok {
+			if len(v.(string)) > 0 {
+				settings.DataDiskType = v.(string)
+			}
+		}
+
+		if v, ok := _settings["disk_autoresize"]; ok {
+			if v.(bool) {
+				settings.StorageAutoResize = v.(bool)
+			}
 		}
 
 		_oldDatabaseFlags := make([]interface{}, 0)

@@ -598,7 +598,7 @@ func resourceSqlDatabaseInstanceRead(d *schema.ResourceData, meta interface{}) e
 	}
 
 	if v, ok := _settings["disk_size"]; ok && v != nil {
-		if v.(int) > 0 {
+		if v.(int) > 0 && settings.DataDiskSizeGb < int64(v.(int)) {
 			_settings["disk_size"] = settings.DataDiskSizeGb
 		}
 	}

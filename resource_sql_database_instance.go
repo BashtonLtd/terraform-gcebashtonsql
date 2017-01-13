@@ -893,7 +893,7 @@ func resourceSqlDatabaseInstanceUpdate(d *schema.ResourceData, meta interface{})
 		}
 
 		if v, ok := _settings["disk_size"]; ok {
-			if v.(int) > 0 {
+			if v.(int) > 0 && int64(v.(int)) > instance.Settings.DataDiskSizeGb {
 				settings.DataDiskSizeGb = int64(v.(int))
 			}
 		}
@@ -992,6 +992,7 @@ func resourceSqlDatabaseInstanceUpdate(d *schema.ResourceData, meta interface{})
 					if vp != nil {
 						_authorizedNetworksList = vp.([]interface{})
 					}
+
 					_oipc_map := make(map[string]interface{})
 					for _, _ipc := range _oldAuthorizedNetworkList {
 						_oipc_map[_ipc.(string)] = true
@@ -1005,8 +1006,7 @@ func resourceSqlDatabaseInstanceUpdate(d *schema.ResourceData, meta interface{})
 								settings.IpConfiguration.AuthorizedNetworks, entry)
 						}
 					}
-					// finally, update old entries and insert new ones
-					// and are still defined.
+					// insert new ones
 					for _, _ipc := range _authorizedNetworksList {
 						entry := &sqladmin.AclEntry{}
 						entry.Value = _ipc.(string)
@@ -1052,7 +1052,8 @@ func resourceSqlDatabaseInstanceUpdate(d *schema.ResourceData, meta interface{})
 
 	op, err := config.clientSqlAdmin.Instances.Update(project, instance.Name, instance).Do()
 	if err != nil {
-		return fmt.Errorf("Error, failed to update instance %s: %s", instance.Name, err)
+		json, _ := instance.MarshalJSON()
+		return fmt.Errorf("Error, failed to update instance %s: %s, %v", instance.Name, err, string(json[:]))
 	}
 
 	err = sqladminOperationWait(config, op, "Create Instance")

@@ -168,6 +168,10 @@ func resourceSqlDatabaseInstance() *schema.Resource {
 										Optional:     true,
 										ValidateFunc: validateHour,
 									},
+									"update_track": &schema.Schema{
+										Type:     schema.TypeString,
+										Optional: true,
+									},
 								},
 							},
 						},
@@ -459,6 +463,12 @@ func resourceSqlDatabaseInstanceCreate(d *schema.ResourceData, meta interface{})
 
 			if vp, okp := _maintenanceWindow["hour"]; okp {
 				settings.MaintenanceWindow.Hour = int64(vp.(int))
+			}
+
+			if vp, ok := _maintenanceWindow["update_track"]; ok {
+				if len(vp.(string)) > 0 {
+					settings.MaintenanceWindow.UpdateTrack = vp.(string)
+				}
 			}
 		}
 	}
@@ -781,8 +791,14 @@ func resourceSqlDatabaseInstanceRead(d *schema.ResourceData, meta interface{}) e
 				_maintenanceWindow["day"] = settings.MaintenanceWindow.Day
 			}
 
-			if vp, okp := _maintenanceWindow["enabled"]; okp && vp != nil {
+			if vp, okp := _maintenanceWindow["hour"]; okp && vp != nil {
 				_maintenanceWindow["hour"] = settings.MaintenanceWindow.Hour
+			}
+
+			if vp, ok := _maintenanceWindow["update_track"]; ok && vp != nil {
+				if len(vp.(string)) > 0 {
+					_maintenanceWindow["update_track"] = settings.MaintenanceWindow.UpdateTrack
+				}
 			}
 
 			_maintenanceWindowList[0] = _maintenanceWindow
@@ -1113,6 +1129,12 @@ func resourceSqlDatabaseInstanceUpdate(d *schema.ResourceData, meta interface{})
 
 				if vp, okp := _maintenanceWindow["hour"]; okp {
 					settings.MaintenanceWindow.Hour = int64(vp.(int))
+				}
+
+				if vp, ok := _maintenanceWindow["update_track"]; ok {
+					if len(vp.(string)) > 0 {
+						settings.MaintenanceWindow.UpdateTrack = vp.(string)
+					}
 				}
 			}
 		}

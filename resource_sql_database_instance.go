@@ -18,6 +18,9 @@ func resourceSqlDatabaseInstance() *schema.Resource {
 		Read:   resourceSqlDatabaseInstanceRead,
 		Update: resourceSqlDatabaseInstanceUpdate,
 		Delete: resourceSqlDatabaseInstanceDelete,
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
 
 		Schema: map[string]*schema.Schema{
 			"region": &schema.Schema{
@@ -71,18 +74,7 @@ func resourceSqlDatabaseInstance() *schema.Resource {
 						"crash_safe_replication": &schema.Schema{
 							Type:     schema.TypeBool,
 							Optional: true,
-						},
-						"disk_size": &schema.Schema{
-							Type:     schema.TypeInt,
-							Optional: true,
-						},
-						"disk_type": &schema.Schema{
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-						"disk_autoresize": &schema.Schema{
-							Type:     schema.TypeBool,
-							Optional: true,
+							Computed: true,
 						},
 						"database_flags": &schema.Schema{
 							Type:     schema.TypeList,
@@ -99,6 +91,18 @@ func resourceSqlDatabaseInstance() *schema.Resource {
 									},
 								},
 							},
+						},
+						"disk_autoresize": &schema.Schema{
+							Type:     schema.TypeBool,
+							Optional: true,
+						},
+						"disk_size": &schema.Schema{
+							Type:     schema.TypeInt,
+							Optional: true,
+						},
+						"disk_type": &schema.Schema{
+							Type:     schema.TypeString,
+							Optional: true,
 						},
 						"ip_configuration": &schema.Schema{
 							Type:     schema.TypeList,
@@ -222,6 +226,7 @@ func resourceSqlDatabaseInstance() *schema.Resource {
 			"master_instance_name": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
+				Computed: true,
 				ForceNew: true,
 			},
 
@@ -579,6 +584,11 @@ func resourceSqlDatabaseInstanceRead(d *schema.ResourceData, meta interface{}) e
 		return err
 	}
 
+	// In the import case this will be set
+	if _, ok := d.GetOk("name"); !ok {
+		d.Set("name", d.Id())
+	}
+
 	instance, err := config.clientSqlAdmin.Instances.Get(project,
 		d.Get("name").(string)).Do()
 
@@ -596,7 +606,16 @@ func resourceSqlDatabaseInstanceRead(d *schema.ResourceData, meta interface{}) e
 	}
 
 	_settingsList := d.Get("settings").([]interface{})
-	_settings := _settingsList[0].(map[string]interface{})
+	var _settings map[string]interface{}
+
+	if len(_settingsList) > 0 {
+		_settings = _settingsList[0].(map[string]interface{})
+	} else {
+		_settingsList = make([]interface{}, 1)
+		_settings = make(map[string]interface{})
+		d.Set("region", instance.Region)
+		d.Set("database_version", instance.DatabaseVersion)
+	}
 
 	settings := instance.Settings
 	_settings["version"] = settings.SettingsVersion
@@ -884,10 +903,7 @@ func resourceSqlDatabaseInstanceRead(d *schema.ResourceData, meta interface{}) e
 	}
 
 	d.Set("ip_address", _ipAddresses)
-
-	if v, ok := d.GetOk("master_instance_name"); ok && v != nil {
-		d.Set("master_instance_name", strings.TrimPrefix(instance.MasterInstanceName, project+":"))
-	}
+	d.Set("master_instance_name", strings.TrimPrefix(instance.MasterInstanceName, project+":"))
 
 	d.Set("self_link", instance.SelfLink)
 	d.SetId(instance.Name)
